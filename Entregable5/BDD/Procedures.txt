@@ -1,0 +1,58 @@
+/*REGISTROS INICIALES, VISTAS Y PROCESOS DE ROOM-CONTROL. 2CM9*/
+CONNECT Room_control;
+
+
+/*VISTAS*/
+CREATE VIEW seleccionarUsuario AS
+	SELECT IdUsuario, CONCAT(Nombre, " ", APaterno, " ", AMaterno) as "NomCompleto"
+		FROM Usuario;
+
+CREATE VIEW estadoActual AS
+	SELECT th.Temperatura, th.Humedad, l.Intensidad AS Luz, sh.Detectado AS Humo, sp.Detectado AS Presencia, ss.Detectado AS Sonido, 
+	CONCAT(v.Temperatura,"*",v.Humedad,"*",v.Humo,"*",v.Usuario) AS Ventilador
+		FROM TempHum th, LED l, Ventilador v, SensorPIR sp, SensorSonido ss, SensorHumo sh
+		WHERE th.IdTH=(SELECT MAX(IdTH) FROM TempHum) AND
+				l.IdLed= (SELECT MAX(IdLed) FROM LED) AND
+				v.IdVent=(SELECT MAX(IdVent) FROM Ventilador) AND
+				sp.IdPir= (SELECT MAX(IdPir) FROM SensorPIR) AND
+				ss.IdSon= (SELECT MAX(IdSon) FROM SensorSonido) AND
+				sh.IdHumo= (SELECT MAX(IdHumo) FROM SensorHumo);
+
+/*PROCEDIMIENTOS*/
+DELIMITER #
+CREATE PROCEDURE actualizarEstadoActual(IN tem int, IN hum int, IN luz int, IN luzChar char, IN humo int, IN pre int, IN son int, IN ventTem int, IN ventHum int, IN ventHumo int)
+BEGIN
+	UPDATE TempHum set Temperatura=tem, Humedad=hum WHERE IdTH=(SELECT maxId FROM (SELECT MAX(IdTH) AS maxId FROM TempHum) AS MaximoID)limit 1;
+	UPDATE LED set Intensidad=luz, IntenCaracter=luzChar WHERE IdLed=(SELECT maxId FROM (SELECT MAX(IdLed) AS maxId FROM LED) AS MaximoID)limit 1;
+	UPDATE SensorHumo set Detectado=humo WHERE IdHumo=(SELECT maxId FROM (SELECT MAX(IdHumo) AS maxId FROM SensorHumo) AS MaximoID)limit 1;
+	UPDATE SensorPIR set Detectado=pre WHERE IdPir=(SELECT maxId FROM (SELECT MAX(IdPir) AS maxId FROM SensorPIR) AS MaximoID)limit 1;
+	UPDATE SensorSonido set Detectado=son WHERE IdSon=(SELECT maxId FROM (SELECT MAX(IdSon) AS maxId FROM SensorSonido) AS MaximoID)limit 1;
+	UPDATE Ventilador set Temperatura=ventTem, Humedad=ventHum, Humo=ventHumo WHERE IdVent=(SELECT maxId FROM (SELECT MAX(IdVent) AS maxId FROM Ventilador) AS MaximoID)limit 1;
+END #
+DELIMITER ;
+
+
+DELIMITER #
+CREATE PROCEDURE actualizarEstadoActualNoLuz(IN tem int, IN hum int, IN humo int, IN pre int, IN son int, IN ventTem int, IN ventHum int, IN ventHumo int)
+BEGIN
+	UPDATE TempHum set Temperatura=tem, Humedad=hum WHERE IdTH=(SELECT maxId FROM (SELECT MAX(IdTH) AS maxId FROM TempHum) AS MaximoID)limit 1;
+	UPDATE SensorHumo set Detectado=humo WHERE IdHumo=(SELECT maxId FROM (SELECT MAX(IdHumo) AS maxId FROM SensorHumo) AS MaximoID)limit 1;
+	UPDATE SensorPIR set Detectado=pre WHERE IdPir=(SELECT maxId FROM (SELECT MAX(IdPir) AS maxId FROM SensorPIR) AS MaximoID)limit 1;
+	UPDATE SensorSonido set Detectado=son WHERE IdSon=(SELECT maxId FROM (SELECT MAX(IdSon) AS maxId FROM SensorSonido) AS MaximoID)limit 1;
+	UPDATE Ventilador set Temperatura=ventTem, Humedad=ventHum, Humo=ventHumo WHERE IdVent=(SELECT maxId FROM (SELECT MAX(IdVent) AS maxId FROM Ventilador) AS MaximoID)limit 1;
+END #
+DELIMITER ;
+
+/*RESISTROS INICIALES*/
+INSERT INTO Lugar VALUES('1', 'Sala');
+INSERT INTO LED VALUES('1', '0', 'z', NOW(), NOW(), '1');
+INSERT INTO SensorPir VALUES('1', '0', NOW(), NOW(), '1');
+INSERT INTO SensorSonido VALUES('1', '0', NOW(), NOW(), '1');
+INSERT INTO Ventilador VALUES('1', '0', '0', '0', '-', NOW(), NOW(), '1');
+INSERT INTO TempHum VALUES('1', '23', '15', NOW(), NOW(), '1');
+INSERT INTO SensorHumo VALUES ('1', '0', NOW(), NOW(), '1');
+INSERT INTO Usuario VALUES('PRIMER', 'USUARIO', 'REGISTRADO', 'admin', 'ABCZ1230', NOW(), '1');
+INSERT INTO Controla VALUES('ABCZ1230', '1');
+
+
+
